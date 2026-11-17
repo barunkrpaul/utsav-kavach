@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Utsav Kavach Capacity Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anek+Bangla:wght@500;700;800&family=Hind+Siliguri:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: one narrow column for a phone held in one hand. The capacity plate
+   sits first, like the load plate in a lift; measurements follow underneath. */
+:root {
+  --paper: #F3F4EF;
+  --surface: #FFFFFF;
+  --ink: #14171A;
+  --muted: #5B636B;
+  --line: #D5D9D2;
+  --plate: #123B34;
+  --plate-ink: #F6F3E7;
+  --accent: #E8B400;
+  --ok: #1E7F4F;
+  --warn: #B86E00;
+  --bad: #B3261E;
+  --display: "Anek Bangla", "Noto Sans Bengali", "Segoe UI", sans-serif;
+  --body: "Hind Siliguri", "Noto Sans Bengali", "Segoe UI", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0F1412; --surface: #18201D; --ink: #EDEFE9; --muted: #A2ABA5; --line: #2C3833;
+    --plate: #0B2A25; --plate-ink: #F6F3E7; --accent: #F2C230;
+    --ok: #4CC38A; --warn: #E7A23B; --bad: #F2726B;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0F1412; --surface: #18201D; --ink: #EDEFE9; --muted: #A2ABA5; --line: #2C3833;
+  --plate: #0B2A25; --plate-ink: #F6F3E7; --accent: #F2C230;
+  --ok: #4CC38A; --warn: #E7A23B; --bad: #F2726B;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--paper); color: var(--ink);
+  font-family: var(--body); font-size: 16px; line-height: 1.45;
+  -webkit-text-size-adjust: 100%;
+}
+.wrap { max-width: 560px; margin: 0 auto; padding: 16px 16px 48px; display: flex; flex-direction: column; gap: 16px; }
+header.top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spacing: 0.01em; margin: 0; }
+.brand span { color: var(--muted); font-weight: 500; font-size: 17px; margin-left: 8px; }
+.version { color: var(--muted); font-size: 13px; }
+nav.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+nav.tabs a {
+  text-decoration: none; text-align: center; padding: 10px 6px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  font-family: var(--display); font-weight: 700; font-size: 16px;
+}
+nav.tabs a small { display: block; font-family: var(--body); font-weight: 400; font-size: 12px; color: var(--muted); }
+nav.tabs a[aria-current="page"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+nav.tabs a[aria-current="page"] small { color: var(--paper); opacity: 0.75; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible {
+  outline: 3px solid var(--accent); outline-offset: 2px;
+}
+.view { display: none; flex-direction: column; gap: 16px; }
+.view.on { display: flex; }
+
+/* the plate */
+.plate {
+  background: var(--plate); color: var(--plate-ink); border-radius: 10px; padding: 16px 18px 14px;
+  border: 3px solid var(--accent); position: relative;
+}
+.plate::before, .plate::after {
+  content: ""; position: absolute; top: 10px; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); opacity: 0.85;
+}
+.plate::before { left: 10px; } .plate::after { right: 10px; }
+.plate-top { display: flex; justify-content: space-between; gap: 12px; padding: 0 16px; font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: 0.06em; }
+.plate-num { font-family: var(--display); font-weight: 800; font-size: 92px; line-height: 1; text-align: center; margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+.plate-sub { text-align: center; font-size: 15px; opacity: 0.92; }
+.plate-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; flex-wrap: wrap; font-size: 14px; }
+.grade { font-family: var(--display); font-weight: 800; font-size: 17px; padding: 3px 12px; border-radius: 999px; background: var(--plate-ink); color: var(--plate); }
+.grade.g-A { background: #BFE8CF; color: #0C3B22; }
+.grade.g-B { background: #F3E3A1; color: #4A3A00; }
+.grade.g-C { background: #F6C98B; color: #4D2A00; }
+.grade.g-D { background: #F3B0AA; color: #5A0F0A; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.card h2 { font-family: var(--display); font-weight: 700; font-size: 19px; margin: 0; text-wrap: balance; }
+.card h2 small { font-family: var(--body); font-weight: 400; font-size: 13px; color: var(--muted); margin-left: 6px; }
+.note { color: var(--muted); font-size: 13.5px; margin: 0; }
+.example { border-left: 4px solid var(--accent); padding-left: 10px; }
+
+.figs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.fig { border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 2px; }
+.fig b { font-family: var(--display); font-weight: 800; font-size: 26px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.fig span { font-size: 13px; color: var(--muted); }
+.fig.wide { grid-column: 1 / -1; }
+.fig.bad { border-left: 5px solid var(--bad); } .fig.warn { border-left: 5px solid var(--warn); } .fig.ok { border-left: 5px solid var(--ok); }
+
+.issues { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.issues li { border: 1px solid var(--line); border-left-width: 5px; border-radius: 8px; padding: 8px 10px; font-size: 14.5px; }
+.issues li b { font-family: var(--display); font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase; display: block; }
+.issues li.critical { border-left-color: var(--bad); } .issues li.critical b { color: var(--bad); }
+.issues li.major { border-left-color: var(--warn); } .issues li.major b { color: var(--warn); }
+.issues li.minor { border-left-color: var(--muted); } .issues li.minor b { color: var(--muted); }
+.issues li.none { border-left-color: var(--ok); }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field.full { grid-column: 1 / -1; }
+.field label { font-size: 13.5px; color: var(--muted); }
+input[type="number"], input[type="text"], select {
+  width: 100%; font: inherit; font-size: 17px; padding: 9px 10px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--paper); color: var(--ink); font-variant-numeric: tabular-nums;
+}
+.checks { display: grid; grid-template-columns: 1fr; gap: 6px; }
+.check { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
+.check input { width: 22px; height: 22px; accent-color: var(--plate); flex: none; }
+.check label { font-size: 15px; }
+details summary { cursor: pointer; font-family: var(--display); font-weight: 700; font-size: 16px; }
+details[open] summary { margin-bottom: 10px; }
+
+.btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
+button {
+  font: inherit; font-family: var(--display); font-weight: 700; font-size: 16px; padding: 10px 14px;
+  border-radius: 8px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); cursor: pointer;
+}
+button.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+button.danger { background: var(--bad); border-color: var(--bad); color: #fff; }
+button:active { transform: translateY(1px); }
+.msg { font-size: 14px; color: var(--ok); min-height: 1.4em; margin: 0; }
+
+/* count view */
+.meter { border-radius: 10px; padding: 16px; border: 3px solid var(--ok); background: var(--surface); text-align: center; }
+.meter.amber { border-color: var(--warn); } .meter.red { border-color: var(--bad); } .meter.none { border-color: var(--line); }
+.meter .lab { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: 0.05em; }
+.meter .big { font-family: var(--display); font-weight: 800; font-size: 76px; line-height: 1; font-variant-numeric: tabular-nums; }
+.meter .of { font-size: 18px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.meter .state { margin-top: 8px; font-family: var(--display); font-weight: 800; font-size: 20px; }
+.meter.green .state { color: var(--ok); } .meter.amber .state { color: var(--warn); } .meter.red .state { color: var(--bad); }
+.bar { height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; margin-top: 10px; }
+.bar i { display: block; height: 100%; width: 0; background: var(--ok); }
+.meter.amber .bar i { background: var(--warn); } .meter.red .bar i { background: var(--bad); }
+.taps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.taps button { padding: 22px 8px; font-size: 24px; border-radius: 12px; }
+.taps .in { background: var(--plate); border-color: var(--plate); color: var(--plate-ink); }
+.taps .out { background: var(--surface); color: var(--ink); border: 2px solid var(--ink); }
+.taps small { display: block; font-family: var(--body); font-weight: 400; font-size: 13px; opacity: 0.85; }
+.rain { border: 2px dashed var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.rain.on { border: 3px solid var(--bad); background: var(--surface); }
+.rain ol { margin: 0; padding-left: 22px; font-size: 15.5px; }
+.rain h3 { margin: 0; font-family: var(--display); font-size: 18px; }
+
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-family: var(--display); font-weight: 700; font-size: 13px; color: var(--muted); }
+textarea { width: 100%; min-height: 110px; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: var(--paper); color: var(--ink); }
+footer { color: var(--muted); font-size: 13px; }
+footer p { margin: 0 0 6px; }
+@media (max-width: 380px) { .plate-num { font-size: 76px; } .meter .big { font-size: 62px; } }
+@media (prefers-reduced-motion: reduce) { button:active { transform: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1 class="brand">উৎসব কবচ <span>Utsav Kavach</span></h1>
+    <div class="version">Field prototype 0.2</div>
+  </header>
+
+  <nav class="tabs" aria-label="Sections">
+    <a href="#measure" id="tab-measure">Measure<small>মাপ</small></a>
+    <a href="#count" id="tab-count">Count<small>গণনা</small></a>
+    <a href="#records" id="tab-records">Records<small>নথি</small></a>
+  </nav>
+
+  <!-- MEASURE -->
+  <main class="view" id="view-measure">
+    <section class="plate" aria-live="polite">
+      <div class="plate-top"><span>নিরাপদ ধারণক্ষমতা</span><span>SAFE CAPACITY</span></div>
+      <div class="plate-num" id="r_cap">0</div>
+      <div class="plate-sub">persons inside at one time · একসঙ্গে সর্বোচ্চ <span id="r_cap_bn">০</span> জন</div>
+      <div class="plate-foot"><span class="grade" id="r_grade">Grade -</span><span id="r_limit"></span></div>
+    </section>
+
+    <section class="card">
+      <h2>What the numbers say</h2>
+      <div class="figs">
+        <div class="fig"><b id="r_admit">0</b><span>people to admit per minute, at most</span></div>
+        <div class="fig"><b id="r_empty">0</b><span>minutes to empty the pandal</span></div>
+        <div class="fig" id="box_wet"><b id="r_wet">0</b><span>people in the open queue if it rains</span></div>
+        <div class="fig" id="box_dens"><b id="r_dens">0</b><span>persons per m² if they all push in</span></div>
+        <div class="fig wide" id="box_time"><b id="r_time">-</b><span id="r_time_lab">time for a rain surge to reach the limit</span></div>
+      </div>
+      <ul class="issues" id="r_issues"></ul>
+    </section>
+
+    <section class="card">
+      <h2>Queue plan <small>bamboo rails, rope gates, two volunteers a gate</small></h2>
+      <div class="figs">
+        <div class="fig"><b id="q_lanes">0</b><span id="q_lanes_lab">lanes before the gate</span></div>
+        <div class="fig"><b id="q_pens">0</b><span id="q_pens_lab">pens along the lane</span></div>
+        <div class="fig"><b id="q_release">0</b><span>seconds between releases of one pen</span></div>
+        <div class="fig"><b id="q_wait">0</b><span>minutes of wait from the back of the lane</span></div>
+        <div class="fig wide"><b id="q_fast">0</b><span id="q_fast_lab">people per minute if nobody stops inside</span></div>
+      </div>
+      <p class="note" id="q_note"></p>
+    </section>
+
+    <section class="card">
+      <h2>Measurements <small>metres</small></h2>
+      <p class="note example" id="exampleNote">Example values are filled in. Replace them with what you measure.</p>
+      <div class="grid2">
+        <div class="field full"><label for="f_name">Puja or pandal name</label><input type="text" id="f_name" autocomplete="off"></div>
+        <div class="field full"><label for="f_place">Place</label><input type="text" id="f_place" autocomplete="off"></div>
+        <div class="field"><label for="f_len">Floor length open to visitors</label><input type="number" id="f_len" inputmode="decimal" min="0" step="0.1"></div>
+        <div class="field"><label for="f_wid">Floor width open to visitors</label><input type="number" id="f_wid" inputmode="decimal" min="0" step="0.1"></div>
+        <div class="field"><label for="f_blocked">Area taken by stage and decoration (m²)</label><input type="number" id="f_blocked" inputmode="decimal" min="0" step="1"></div>
+        <div class="field"><label for="f_area">Usable floor area (m²)</label><input type="text" id="f_area" readonly tabindex="-1"></div>
+        <div class="field"><label for="f_entry">Entry, clear width</label><input type="number" id="f_entry" inputmode="decimal" min="0" step="0.1"></div>
+        <div class="field"><label for="f_exit">All exits together, clear width</label><input type="number" id="f_exit" inputmode="decimal" min="0" step="0.1"></div>
+        <div class="field"><label for="f_laneW">Queue lane width</label><input type="number" id="f_laneW" inputmode="decimal" min="0" step="0.1"></div>
+        <div class="field"><label for="f_laneL">Queue lane length</label><input type="number" id="f_laneL" inputmode="decimal" min="0" step="1"></div>
+        <div class="field full"><label for="f_cov">Length of the lane that has a roof or cover</label><input type="number" id="f_cov" inputmode="decimal" min="0" step="1"></div>
+      </div>
+      <div class="checks">
+        <div class="check"><input type="checkbox" id="c_sep"><label for="c_sep">The exit is a separate gate from the entry</label></div>
+        <div class="check"><input type="checkbox" id="c_emg"><label for="c_emg">There is an emergency gate</label></div>
+        <div class="check"><input type="checkbox" id="c_light"><label for="c_light">The visitor path is well lit</label></div>
+        <div class="check"><input type="checkbox" id="c_amb"><label for="c_amb">An ambulance can reach the gate</label></div>
+        <div class="check"><input type="checkbox" id="c_script"><label for="c_script">Announcements follow an agreed script</label></div>
+        <div class="check"><input type="checkbox" id="c_steps"><label for="c_steps">The exit has steps</label></div>
+        <div class="check"><input type="checkbox" id="c_vip"><label for="c_vip">A separate VIP gate is in use</label></div>
+      </div>
+      <div class="btnrow">
+        <button type="button" id="b_save">Save this record</button>
+        <button type="button" class="ghost" id="b_clear">Clear the form</button>
+      </div>
+      <p class="msg" id="m_save" role="status"></p>
+    </section>
+
+    <section class="card">
+      <details id="assume">
+        <summary>Values used in the calculation</summary>
+        <div class="grid2">
+          <div class="field full"><label for="p_clear">Time allowed to empty the pandal</label>
+            <select id="p_clear">
+              <option value="2.5">2.5 minutes (cloth, bamboo, thermocol: high fire risk)</option>
+              <option value="5">5 minutes</option>
+              <option value="8">8 minutes (open sides, little to burn)</option>
+            </select></div>
+          <div class="field"><label for="p_flow">Exit flow, level ground (persons per metre per minute)</label><input type="number" id="p_flow" inputmode="decimal" min="1" step="1"></div>
+          <div class="field"><label for="p_flowS">Exit flow with steps</label><input type="number" id="p_flowS" inputmode="decimal" min="1" step="1"></div>
+          <div class="field"><label for="p_rho">Design density inside (persons per m²)</label><input type="number" id="p_rho" inputmode="decimal" min="0.1" step="0.1"></div>
+          <div class="field"><label for="p_limit">Upper limit (persons per m²)</label><input type="number" id="p_limit" inputmode="decimal" min="0.1" step="0.1"></div>
+          <div class="field"><label for="p_danger">Crush risk (persons per m²)</label><input type="number" id="p_danger" inputmode="decimal" min="0.1" step="0.1"></div>
+          <div class="field"><label for="p_queue">Full queue (persons per m²)</label><input type="number" id="p_queue" inputmode="decimal" min="0.1" step="0.1"></div>
+          <div class="field"><label for="p_dwell">Minutes a visitor stays inside</label><input type="number" id="p_dwell" inputmode="decimal" min="0.5" step="0.5"></div>
+          <div class="field"><label for="p_wet">Exit flow in rain, share of normal</label><input type="number" id="p_wet" inputmode="decimal" min="0.1" max="1" step="0.05"></div>
+        </div>
+        <p class="note">Capacity is the smaller of two figures: floor area × design density, and exit width × exit flow × time allowed. Flow values follow the UK Guide to Safety at Sports Grounds. The fire service should confirm every value before a figure is used on a certificate.</p>
+        <div class="btnrow"><button type="button" class="ghost" id="b_defaults">Reset these values</button></div>
+      </details>
+    </section>
+  </main>
+
+  <!-- COUNT -->
+  <main class="view" id="view-count">
+    <section class="meter none" id="meter" aria-live="polite">
+      <div class="lab">ভিতরে · INSIDE NOW</div>
+      <div class="big" id="n_inside">0</div>
+      <div class="of">of <span id="n_cap">0</span> allowed</div>
+      <div class="bar"><i id="n_bar"></i></div>
+      <div class="state" id="n_state">Set the capacity below</div>
+    </section>
+
+    <div class="taps">
+      <button type="button" class="in" id="b_in1">+1 IN<small>প্রবেশ</small></button>
+      <button type="button" class="out" id="b_out1">+1 OUT<small>প্রস্থান</small></button>
+      <button type="button" class="in" id="b_in5">+5 IN</button>
+      <button type="button" class="out" id="b_out5">+5 OUT</button>
+    </div>
+
+    <section class="card">
+      <div class="grid2">
+        <div class="field"><label for="n_capIn">Capacity for this pandal</label><input type="number" id="n_capIn" inputmode="numeric" min="0" step="1"></div>
+        <div class="field"><label>Highest count so far</label><input type="text" id="n_peak" readonly tabindex="-1"></div>
+        <div class="field full"><label>Totals since start</label><input type="text" id="n_totals" readonly tabindex="-1"></div>
+        <div class="field full"><label>Time spent above capacity</label><input type="text" id="n_over" readonly tabindex="-1"></div>
+      </div>
+      <div class="btnrow">
+        <button type="button" class="ghost" id="b_undo">Undo last tap</button>
+        <button type="button" class="ghost" id="b_useCalc">Use the measured capacity</button>
+        <button type="button" id="b_saveCount">Save this count</button>
+        <button type="button" class="ghost" id="b_reset">Start again from zero</button>
+        <button type="button" class="danger" id="b_resetYes" hidden>Yes, set everything to zero</button>
+      </div>
+      <p class="msg" id="m_count" role="status"></p>
+      <p class="note">One phone can count both directions at a small gate. With two gates, one person counts IN on one phone and another counts OUT on a second phone; subtract the totals every ten minutes.</p>
+    </section>
+
+    <section class="rain" id="rain">
+      <h3>বৃষ্টি-মোড · Rain mode</h3>
+      <div class="btnrow"><button type="button" id="b_rain">It has started to rain</button></div>
+      <ol id="rainSteps" hidden>
+        <li>Hold the entry. প্রবেশ বন্ধ রাখুন।</li>
+        <li>Open every exit fully. প্রস্থান পথ খুলে দিন।</li>
+        <li>Send the people in the open queue to the marked shelter. খোলা লাইনের দর্শনার্থীদের ছাউনিতে পাঠান।</li>
+        <li>Use only the agreed announcement. No whistles.</li>
+        <li>Tell the police control room.</li>
+        <li>After the rain, let people in again in small groups.</li>
+      </ol>
+    </section>
+  </main>
+
+  <!-- RECORDS -->
+  <main class="view" id="view-records">
+    <section class="card">
+      <h2>Saved records <small id="rec_n"></small></h2>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Time</th><th>Pandal</th><th>Area m²</th><th>Entry</th><th>Exit</th><th>Capacity</th><th>Grade</th><th>Peak count</th><th></th></tr></thead>
+          <tbody id="rec_body"></tbody>
+        </table>
+      </div>
+      <p class="note" id="rec_empty">Nothing saved yet. Save a record from the Measure or Count screen.</p>
+      <div class="btnrow">
+        <button type="button" id="b_copy">Copy all records as CSV</button>
+        <button type="button" class="ghost" id="b_show">Show the CSV text</button>
+      </div>
+      <p class="msg" id="m_copy" role="status"></p>
+      <textarea id="csv" hidden readonly aria-label="Records as CSV text"></textarea>
+      <p class="note">Records stay in this browser on this phone only. Copy them out before you close the page, and paste them into a message or a note.</p>
+    </section>
+  </main>
+
+  <footer>
+    <p>An aid for inspection and planning. It does not replace the decision of the police or the fire service, and it is not a certificate.</p>
+    <p>No camera is used and nothing leaves this phone.</p>
+  </footer>
+</div>
+<script>
+/* Utsav Kavach capacity model, version 0.1
+   A transparent "hydraulic" model: capacity is the smaller of what the floor
+   can hold at a safe density and what the exits can discharge in the allowed
+   time. All parameters are visible and editable. */
+var UK_DEFAULTS = {
+  flowLevel: 82,   // persons per metre of clear width per minute, level ground
+  flowSteps: 66,   // persons per metre per minute where the exit has steps
+  rhoDesign: 2.0,  // persons per m2 for people moving through a pandal
+  rhoLimit: 4.0,   // persons per m2, upper limit for a moving crowd
+  rhoDanger: 5.0,  // persons per m2, crushing becomes likely
+  rhoQueue: 2.5,   // persons per m2 in a full, slow queue
+  clearMin: 2.5,   // minutes allowed to empty the pandal
+  dwellMin: 4,     // average minutes a visitor stays inside
+  wetFactor: 0.75  // exit flow on wet or dim ground, as a share of normal
+};
+
+function ukNum(v) {
+  var n = parseFloat(v);
+  return isFinite(n) && n > 0 ? n : 0;
+}
+
+function ukCompute(inp, P) {
+  P = P || UK_DEFAULTS;
+  var area = ukNum(inp.area);
+  var wIn = ukNum(inp.entryWidth);
+  var wOut = ukNum(inp.exitWidth);
+  var laneW = ukNum(inp.laneWidth);
+  var laneL = ukNum(inp.laneLength);
+  var coveredL = Math.min(ukNum(inp.coveredLength), laneL);
+  var flow = inp.exitSteps ? P.flowSteps : P.flowLevel;
+  var ready = area > 0 && wIn > 0 && wOut > 0;
+
+  var capArea = Math.floor(area * P.rhoDesign);
+  var capExit = Math.floor(wOut * flow * P.clearMin);
+  var capacity = Math.min(capArea, capExit);
+  var limitedBy = capExit < capArea ? 'exit' : 'area';
+  var gateFlow = Math.min(wIn * P.flowLevel, wOut * flow);
+  var admitPerMin = Math.floor(Math.min(capacity / P.dwellMin, gateFlow));
+  var admitFast = Math.floor(Math.min(capacity / (P.dwellMin / 2), gateFlow));
+  var emptyMin = wOut > 0 ? capacity / (wOut * flow) : 0;
+  var emptyMinWet = wOut > 0 ? capacity / (wOut * flow * P.wetFactor) : 0;
+  var exitNeeded = capArea / (flow * P.clearMin);
+
+  var laneArea = laneW * laneL;
+  var queuePeak = Math.floor(laneArea * P.rhoQueue);
+  var coveredShare = laneL > 0 ? coveredL / laneL : 0;
+  var wetQueue = Math.round(queuePeak * (1 - coveredShare));
+  var rainOccupancy = capacity + wetQueue;
+  var rainDensity = area > 0 ? rainOccupancy / area : 0;
+  var inflowPerMin = wIn * P.flowLevel;
+  var roomToLimit = area * P.rhoLimit - capacity;
+  var minsToLimit = (wetQueue > roomToLimit && inflowPerMin > 0) ? roomToLimit / inflowPerMin : null;
+
+  var issues = [];
+  function add(sev, text) { issues.push({ sev: sev, text: text }); }
+  if (ready) {
+    if (!inp.separateExit) add('critical', 'One gate serves as both entry and exit. Give the exit its own gate.');
+    if (wOut < wIn) add('critical', 'The exit is narrower than the entry. People can come in faster than they can leave.');
+    else if (wOut < 2 * wIn) add('major', 'The exit is less than twice the entry width. Widen the exit to ' + (2 * wIn).toFixed(1) + ' m or narrow the entry.');
+    if (rainDensity >= P.rhoDanger) add('critical', 'If the uncovered queue pushes in during rain, density reaches ' + rainDensity.toFixed(1) + ' persons per m². Cover the queue or mark a rain refuge.');
+    else if (rainDensity >= P.rhoLimit) add('major', 'A rain surge can take density to ' + rainDensity.toFixed(1) + ' persons per m², above the limit of ' + P.rhoLimit.toFixed(1) + '.');
+    if (capExit < 0.75 * capArea) add('major', 'The exits waste the floor. An exit width of ' + exitNeeded.toFixed(1) + ' m would raise capacity to ' + capArea + '.');
+    if (!inp.emergencyGate) add('major', 'There is no emergency gate.');
+    if (!inp.lighting) add('major', 'Lighting on the visitor path is not adequate.');
+    if (!inp.ambulance) add('major', 'An ambulance cannot reach the gate.');
+    if (inp.exitSteps) add('minor', 'The exit has steps. Ramp it if possible.');
+    if (inp.vipGate) add('minor', 'A separate VIP gate is in use.');
+    if (!inp.scripted) add('minor', 'Announcements are not from an agreed script.');
+  }
+  var rank = { critical: 0, major: 1, minor: 2 };
+  issues.sort(function (a, b) { return rank[a.sev] - rank[b.sev]; });
+  var nCrit = issues.filter(function (i) { return i.sev === 'critical'; }).length;
+  var nMajor = issues.filter(function (i) { return i.sev === 'major'; }).length;
+  var nMinor = issues.filter(function (i) { return i.sev === 'minor'; }).length;
+  var grade = !ready ? '-' : nCrit > 0 ? 'D' : nMajor >= 2 ? 'C' : (nMajor === 1 || nMinor >= 2) ? 'B' : 'A';
+
+  return {
+    ready: ready, capArea: capArea, capExit: capExit, capacity: capacity, limitedBy: limitedBy,
+    admitPerMin: admitPerMin, admitFast: admitFast, gateFlow: gateFlow, emptyMin: emptyMin, emptyMinWet: emptyMinWet, exitNeeded: exitNeeded,
+    queuePeak: queuePeak, coveredShare: coveredShare, wetQueue: wetQueue,
+    rainOccupancy: rainOccupancy, rainDensity: rainDensity, minsToLimit: minsToLimit,
+    issues: issues, grade: grade
+  };
+}
+
+/* Queue plan: narrow lanes before the gate, pens with a timed release, and wait times.
+   Lanes of about 1.2 m follow entrance experiments; pens stop pressure waves along the queue. */
+function ukQueuePlan(inp, P, r) {
+  P = P || UK_DEFAULTS;
+  var W = ukNum(inp.laneWidth), L = ukNum(inp.laneLength);
+  if (!r || !r.ready || !(W > 0) || !(L > 0) || !(r.admitPerMin > 0)) return { ready: false };
+  var lanes = Math.max(1, Math.floor(W / 1.2));
+  var penPeople = Math.min(100, Math.max(20, Math.round(r.admitPerMin / 2)));
+  var penLength = penPeople / (W * P.rhoQueue);
+  var pens = Math.floor(L / (penLength + 1));
+  if (pens < 1) { pens = 1; penPeople = Math.max(1, Math.floor(L * W * P.rhoQueue)); penLength = L; }
+  var held = pens * penPeople;
+  var waitBack = held / r.admitPerMin;
+  return {
+    ready: true, lanes: lanes, laneEach: W / lanes, pens: pens, penPeople: penPeople, penLength: penLength,
+    releaseSec: Math.round(60 * penPeople / r.admitPerMin), held: held, waitBack: waitBack, waitMid: waitBack / 2
+  };
+}
+
+/* Live count state: green below 80 percent, amber to 100, red at or above capacity. */
+function ukLoad(inside, capacity) {
+  if (!(capacity > 0)) return { pct: 0, state: 'none' };
+  var pct = 100 * inside / capacity;
+  return { pct: pct, state: pct >= 100 ? 'red' : pct >= 80 ? 'amber' : 'green' };
+}
+
+(function () {
+  'use strict';
+  var KEY = 'utsavKavach.v1';
+  function $(id) { return document.getElementById(id); }
+
+  var NUM = ['len', 'wid', 'blocked', 'entry', 'exit', 'laneW', 'laneL', 'cov'];
+  var TXT = ['name', 'place'];
+  var CHK = ['sep', 'emg', 'light', 'amb', 'script', 'steps', 'vip'];
+  var PAR = { p_clear: 'clearMin', p_flow: 'flowLevel', p_flowS: 'flowSteps', p_rho: 'rhoDesign', p_limit: 'rhoLimit',
+    p_danger: 'rhoDanger', p_queue: 'rhoQueue', p_dwell: 'dwellMin', p_wet: 'wetFactor' };
+  var EXAMPLE = { name: '', place: '', len: 25, wid: 12, blocked: 50, entry: 2, exit: 2, laneW: 3, laneL: 120, cov: 0,
+    sep: true, emg: false, light: true, amb: true, script: false, steps: false, vip: false };
+
+  var store = { records: [], form: null, params: null, count: null, touched: false };
+  function load() {
+    try {
+      var s = window.localStorage.getItem(KEY);
+      if (s) { var o = JSON.parse(s); if (o && typeof o === 'object') store = o; }
+    } catch (e) { /* storage not available: the page still works */ }
+    if (!Array.isArray(store.records)) store.records = [];
+  }
+  function persist() {
+    try { window.localStorage.setItem(KEY, JSON.stringify(store)); return true; } catch (e) { return false; }
+  }
+
+  /* ---------- helpers ---------- */
+  function fmt1(x) { return (Math.round(x * 10) / 10).toFixed(1); }
+  function round2(x) { return Math.round(x * 100) / 100; }
+  function bn(n) { return String(n).replace(/[0-9]/g, function (d) { return '০১২৩৪৫৬৭৮৯'.charAt(+d); }); }
+  function mmss(sec) { var m = Math.floor(sec / 60), s = sec % 60; return m + ' min ' + (s < 10 ? '0' : '') + s + ' s'; }
+  function say(id, text) {
+    var el = $(id); el.textContent = text;
+    window.setTimeout(function () { if (el.textContent === text) el.textContent = ''; }, 4000);
+  }
+
+  /* ---------- form ---------- */
+  function readForm() {
+    var f = {};
+    TXT.forEach(function (k) { f[k] = $('f_' + k).value.trim(); });
+    NUM.forEach(function (k) { f[k] = $('f_' + k).value; });
+    CHK.forEach(function (k) { f[k] = $('c_' + k).checked; });
+    return f;
+  }
+  function writeForm(f) {
+    TXT.forEach(function (k) { $('f_' + k).value = f[k] == null ? '' : f[k]; });
+    NUM.forEach(function (k) { $('f_' + k).value = f[k] == null ? '' : f[k]; });
+    CHK.forEach(function (k) { $('c_' + k).checked = !!f[k]; });
+  }
+  function readParams() {
+    var d = UK_DEFAULTS, p = {};
+    Object.keys(PAR).forEach(function (id) {
+      var n = parseFloat($(id).value);
+      p[PAR[id]] = isFinite(n) && n > 0 ? n : d[PAR[id]];
+    });
+    if (p.wetFactor > 1) p.wetFactor = 1;
+    return p;
+  }
+  function writeParams(p) {
+    Object.keys(PAR).forEach(function (id) { $(id).value = p[PAR[id]]; });
+  }
+  function area() {
+    var a = ukNum($('f_len').value) * ukNum($('f_wid').value) - ukNum($('f_blocked').value);
+    return a > 0 ? a : 0;
+  }
+  function inputs() {
+    return {
+      area: area(), entryWidth: $('f_entry').value, exitWidth: $('f_exit').value,
+      laneWidth: $('f_laneW').value, laneLength: $('f_laneL').value, coveredLength: $('f_cov').value,
+      separateExit: $('c_sep').checked, emergencyGate: $('c_emg').checked, lighting: $('c_light').checked,
+      ambulance: $('c_amb').checked, scripted: $('c_script').checked, exitSteps: $('c_steps').checked,
+      vipGate: $('c_vip').checked
+    };
+  }
+
+  /* ---------- measure view ---------- */
+  var last = null;
+  function addIssue(ul, cls, head, text) {
+    var li = document.createElement('li'); li.className = cls;
+    var b = document.createElement('b'); b.textContent = head;
+    li.appendChild(b); li.appendChild(document.createTextNode(text));
+    ul.appendChild(li);
+  }
+  function render() {
+    var P = readParams(), r = ukCompute(inputs(), P), q = ukQueuePlan(inputs(), P, r);
+    last = { r: r, P: P, q: q };
+    $('f_area').value = fmt1(area());
+    $('r_cap').textContent = r.ready ? r.capacity : 0;
+    $('r_cap_bn').textContent = bn(r.ready ? r.capacity : 0);
+    var g = $('r_grade');
+    g.textContent = 'Grade ' + r.grade;
+    g.className = 'grade' + (r.ready ? ' g-' + r.grade : '');
+    $('r_limit').textContent = !r.ready ? 'Enter the floor, the entry and the exit to begin.'
+      : r.limitedBy === 'exit' ? 'Limited by the exit. The floor could hold ' + r.capArea + '.'
+      : 'Limited by the floor. The exits could clear ' + r.capExit + '.';
+    $('r_admit').textContent = r.ready ? r.admitPerMin : 0;
+    $('r_empty').textContent = r.ready ? fmt1(r.emptyMin) : 0;
+    $('r_wet').textContent = r.wetQueue;
+    $('r_dens').textContent = r.ready ? fmt1(r.rainDensity) : 0;
+    $('box_dens').className = 'fig' + (!r.ready ? '' : r.rainDensity >= P.rhoDanger ? ' bad' : r.rainDensity >= P.rhoLimit ? ' warn' : ' ok');
+    var box = $('box_time');
+    if (!r.ready) {
+      $('r_time').textContent = '-'; box.className = 'fig wide';
+      $('r_time_lab').textContent = 'time for a rain surge to reach the limit';
+    } else if (r.minsToLimit === null) {
+      $('r_time').textContent = 'Not reached'; box.className = 'fig wide ok';
+      $('r_time_lab').textContent = 'a rain surge stays under ' + fmt1(P.rhoLimit) + ' persons per m²';
+    } else {
+      $('r_time').textContent = fmt1(r.minsToLimit) + ' min'; box.className = 'fig wide bad';
+      $('r_time_lab').textContent = 'for a rain surge to reach ' + fmt1(P.rhoLimit) + ' persons per m², if nobody stops the entry';
+    }
+    $('q_lanes').textContent = q.ready ? q.lanes : 0;
+    $('q_lanes_lab').textContent = q.ready ? (q.lanes === 1 ? 'lane before the gate, ' : 'lanes before the gate, each about ') + fmt1(q.laneEach) + ' m wide' : 'lanes before the gate';
+    $('q_pens').textContent = q.ready ? q.pens : 0;
+    $('q_pens_lab').textContent = q.ready ? (q.pens === 1 ? 'pen of ' : 'pens of ') + q.penPeople + ' people, each about ' + fmt1(q.penLength) + ' m long' : 'pens along the lane';
+    $('q_release').textContent = q.ready ? q.releaseSec : 0;
+    $('q_wait').textContent = q.ready ? fmt1(q.waitBack) : 0;
+    $('q_fast').textContent = r.ready ? r.admitFast : 0;
+    $('q_fast_lab').textContent = !r.ready ? 'people per minute if nobody stops inside'
+      : 'people per minute if visitors walk through without stopping, against ' + r.admitPerMin + ' now'
+        + (r.admitFast >= Math.floor(r.gateFlow) ? '. The gate width is then the limit.' : '.');
+    $('q_note').textContent = !q.ready ? 'Enter the queue lane to see the plan.'
+      : 'Divide the space before the gate with bamboo rails. Cut the lane into pens with rope gates and leave 1 m between pens. Release one pen at a time. Put a wait board at the back (' + Math.round(q.waitBack) + ' min) and at the middle (' + Math.round(q.waitMid) + ' min). Keep photo-taking for a point after the exit.';
+    var ul = $('r_issues'); ul.textContent = '';
+    if (r.ready && r.issues.length === 0) addIssue(ul, 'none', 'No issue found', 'The measurements pass every check in this version.');
+    r.issues.forEach(function (i) {
+      addIssue(ul, i.sev, i.sev === 'critical' ? 'Fix before opening' : i.sev === 'major' ? 'Needs a change' : 'Improve', i.text);
+    });
+    $('exampleNote').hidden = !!store.touched;
+    store.form = readForm(); store.params = P;
+    persist();
+  }
+
+  function recordFromMeasure() {
+    var f = readForm(), r = last.r, P = last.P;
+    return {
+      t: new Date().toISOString(), kind: 'measure', name: f.name, place: f.place,
+      len: f.len, wid: f.wid, blocked: f.blocked, area: round2(area()), entry: f.entry, exit: f.exit,
+      laneW: f.laneW, laneL: f.laneL, cov: f.cov,
+      sep: f.sep, emg: f.emg, light: f.light, amb: f.amb, script: f.script, steps: f.steps, vip: f.vip,
+      clearMin: P.clearMin, dwellMin: P.dwellMin, rhoDesign: P.rhoDesign,
+      capacity: r.capacity, limitedBy: r.limitedBy, admitPerMin: r.admitPerMin, emptyMin: round2(r.emptyMin),
+      wetQueue: r.wetQueue, rainDensity: round2(r.rainDensity),
+      minsToLimit: r.minsToLimit === null ? '' : round2(r.minsToLimit), grade: r.grade,
+      lanes: last.q.ready ? last.q.lanes : '', pens: last.q.ready ? last.q.pens : '', penPeople: last.q.ready ? last.q.penPeople : '',
+      releaseSec: last.q.ready ? last.q.releaseSec : '', waitBackMin: last.q.ready ? round2(last.q.waitBack) : '', admitFast: r.admitFast,
+      inTotal: '', outTotal: '', peak: '', overSec: ''
+    };
+  }
+
+  /* ---------- count view ---------- */
+  var count = { cap: 0, manual: false, inT: 0, outT: 0, peak: 0, overSec: 0, hist: [], rain: false };
+  function inside() { return Math.max(0, count.inT - count.outT); }
+  function renderCount() {
+    if (!count.manual && last && last.r.ready) count.cap = last.r.capacity;
+    var n = inside(), L = ukLoad(n, count.cap), m = $('meter');
+    $('n_inside').textContent = n;
+    $('n_cap').textContent = count.cap || 0;
+    m.className = 'meter ' + L.state;
+    $('n_bar').style.width = Math.min(100, L.pct) + '%';
+    $('n_state').textContent = L.state === 'none' ? 'Set the capacity below'
+      : count.rain ? 'RAIN MODE: hold the entry'
+      : L.state === 'red' ? 'FULL: hold the entry' : L.state === 'amber' ? 'Nearly full: slow the entry' : 'Open';
+    $('n_totals').value = 'IN ' + count.inT + '  OUT ' + count.outT;
+    $('n_peak').value = String(count.peak);
+    $('n_over').value = mmss(count.overSec);
+    if (document.activeElement !== $('n_capIn')) $('n_capIn').value = count.cap || '';
+    var rain = $('rain');
+    rain.className = 'rain' + (count.rain ? ' on' : '');
+    $('rainSteps').hidden = !count.rain;
+    $('b_rain').textContent = count.rain ? 'The rain has stopped' : 'It has started to rain';
+  }
+  function tap(dIn, dOut) {
+    if (dOut > 0 && inside() < dOut) dOut = inside();
+    if (dIn === 0 && dOut === 0) return;
+    count.inT += dIn; count.outT += dOut;
+    count.hist.push([dIn, dOut]); if (count.hist.length > 60) count.hist.shift();
+    if (inside() > count.peak) count.peak = inside();
+    store.count = count; persist(); renderCount();
+  }
+  function undo() {
+    var h = count.hist.pop(); if (!h) return;
+    count.inT -= h[0]; count.outT -= h[1];
+    store.count = count; persist(); renderCount();
+  }
+  function tick() {
+    if (count.cap > 0 && inside() >= count.cap) { count.overSec += 1; $('n_over').value = mmss(count.overSec); }
+  }
+
+  /* ---------- records view ---------- */
+  var COLS = ['t', 'kind', 'name', 'place', 'len', 'wid', 'blocked', 'area', 'entry', 'exit', 'laneW', 'laneL', 'cov',
+    'sep', 'emg', 'light', 'amb', 'script', 'steps', 'vip', 'clearMin', 'dwellMin', 'rhoDesign', 'capacity', 'limitedBy',
+    'admitPerMin', 'emptyMin', 'wetQueue', 'rainDensity', 'minsToLimit', 'grade', 'lanes', 'pens', 'penPeople', 'releaseSec', 'waitBackMin', 'admitFast', 'inTotal', 'outTotal', 'peak', 'overSec'];
+  function csvCell(v) {
+    var s = v == null ? '' : String(v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  function toCsv() {
+    var lines = [COLS.join(',')];
+    store.records.forEach(function (r) { lines.push(COLS.map(function (c) { return csvCell(r[c]); }).join(',')); });
+    return lines.join('\n');
+  }
+  function td(text) { var c = document.createElement('td'); c.textContent = text == null ? '' : String(text); return c; }
+  function renderRecords() {
+    var body = $('rec_body'); body.textContent = '';
+    store.records.forEach(function (r, i) {
+      var tr = document.createElement('tr');
+      var d = new Date(r.t);
+      tr.appendChild(td(isNaN(d) ? r.t : d.toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })));
+      tr.appendChild(td(r.name || '(no name)'));
+      tr.appendChild(td(r.area)); tr.appendChild(td(r.entry)); tr.appendChild(td(r.exit));
+      tr.appendChild(td(r.capacity)); tr.appendChild(td(r.grade)); tr.appendChild(td(r.peak));
+      var cell = document.createElement('td'), b = document.createElement('button');
+      b.type = 'button'; b.className = 'ghost'; b.textContent = 'Delete';
+      b.addEventListener('click', function () {
+        if (b.dataset.armed === '1') { store.records.splice(i, 1); persist(); renderRecords(); return; }
+        b.dataset.armed = '1'; b.textContent = 'Tap again to delete'; b.className = 'danger';
+        window.setTimeout(function () { b.dataset.armed = ''; b.textContent = 'Delete'; b.className = 'ghost'; }, 4000);
+      });
+      cell.appendChild(b); tr.appendChild(cell);
+      body.appendChild(tr);
+    });
+    $('rec_empty').hidden = store.records.length > 0;
+    $('rec_n').textContent = store.records.length ? '(' + store.records.length + ')' : '';
+    $('csv').value = toCsv();
+  }
+
+  /* ---------- routing ---------- */
+  var VIEWS = ['measure', 'count', 'records'];
+  function route() {
+    var h = (window.location.hash || '').replace('#', '');
+    if (VIEWS.indexOf(h) < 0) h = 'measure';
+    VIEWS.forEach(function (v) {
+      $('view-' + v).className = 'view' + (v === h ? ' on' : '');
+      if (v === h) $('tab-' + v).setAttribute('aria-current', 'page'); else $('tab-' + v).removeAttribute('aria-current');
+    });
+    if (h === 'records') renderRecords();
+    if (h === 'count') renderCount();
+  }
+
+  /* ---------- start ---------- */
+  function start() {
+    load();
+    writeParams(store.params || UK_DEFAULTS);
+    writeForm(store.form || EXAMPLE);
+    if (store.count && typeof store.count === 'object') {
+      ['cap', 'inT', 'outT', 'peak', 'overSec'].forEach(function (k) { if (isFinite(store.count[k])) count[k] = +store.count[k]; });
+      count.manual = !!store.count.manual;
+      count.hist = [];
+    }
+    var formIds = TXT.map(function (k) { return 'f_' + k; }).concat(NUM.map(function (k) { return 'f_' + k; }), CHK.map(function (k) { return 'c_' + k; }));
+    formIds.forEach(function (id) {
+      $(id).addEventListener('input', function () { store.touched = true; render(); });
+      $(id).addEventListener('change', function () { store.touched = true; render(); });
+    });
+    Object.keys(PAR).forEach(function (id) {
+      $(id).addEventListener('input', render); $(id).addEventListener('change', render);
+    });
+    $('b_defaults').addEventListener('click', function () { writeParams(UK_DEFAULTS); render(); });
+    $('b_clear').addEventListener('click', function () {
+      var blank = {}; TXT.concat(NUM).forEach(function (k) { blank[k] = ''; }); CHK.forEach(function (k) { blank[k] = false; });
+      writeForm(blank); store.touched = true; render();
+    });
+    $('b_save').addEventListener('click', function () {
+      if (!last.r.ready) { say('m_save', 'Enter the floor, the entry and the exit first.'); return; }
+      store.records.push(recordFromMeasure());
+      say('m_save', persist() ? 'Saved. See it under Records.' : 'Saved for now, but this browser will not keep it. Copy it from Records.');
+      renderRecords();
+    });
+
+    render();
+
+    $('b_in1').addEventListener('click', function () { tap(1, 0); });
+    $('b_in5').addEventListener('click', function () { tap(5, 0); });
+    $('b_out1').addEventListener('click', function () { tap(0, 1); });
+    $('b_out5').addEventListener('click', function () { tap(0, 5); });
+    $('b_undo').addEventListener('click', undo);
+    $('n_capIn').addEventListener('input', function () {
+      var n = parseInt($('n_capIn').value, 10); count.cap = isFinite(n) && n > 0 ? n : 0; count.manual = count.cap > 0;
+      store.count = count; persist(); renderCount();
+    });
+    $('b_useCalc').addEventListener('click', function () {
+      if (!last.r.ready) { say('m_count', 'Fill in the Measure screen first.'); return; }
+      count.manual = false; store.count = count; persist(); renderCount();
+      say('m_count', 'Capacity set to ' + count.cap + '.');
+    });
+    $('b_reset').addEventListener('click', function () { $('b_resetYes').hidden = !$('b_resetYes').hidden; });
+    $('b_resetYes').addEventListener('click', function () {
+      count.inT = 0; count.outT = 0; count.peak = 0; count.overSec = 0; count.hist = []; count.rain = false;
+      $('b_resetYes').hidden = true; store.count = count; persist(); renderCount();
+    });
+    $('b_saveCount').addEventListener('click', function () {
+      var f = readForm();
+      store.records.push({
+        t: new Date().toISOString(), kind: 'count', name: f.name, place: f.place, capacity: count.cap,
+        inTotal: count.inT, outTotal: count.outT, peak: count.peak, overSec: count.overSec
+      });
+      say('m_count', persist() ? 'Count saved. See it under Records.' : 'Saved for now, but this browser will not keep it. Copy it from Records.');
+      renderRecords();
+    });
+    $('b_rain').addEventListener('click', function () { count.rain = !count.rain; renderCount(); });
+
+    $('b_copy').addEventListener('click', function () {
+      var text = toCsv();
+      function fallback() {
+        var ta = $('csv'); ta.hidden = false; ta.value = text; ta.focus(); ta.select();
+        say('m_copy', 'Copying is blocked here. The text is selected below: copy it by hand.');
+      }
+      try {
+        navigator.clipboard.writeText(text).then(function () { say('m_copy', 'Copied. Paste it into a message or a note.'); }, fallback);
+      } catch (e) { fallback(); }
+    });
+    $('b_show').addEventListener('click', function () { var ta = $('csv'); ta.value = toCsv(); ta.hidden = !ta.hidden; });
+
+    window.addEventListener('hashchange', route);
+    window.setInterval(tick, 1000);
+    window.setInterval(function () { store.count = count; persist(); }, 5000);
+    route(); renderCount(); renderRecords();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+
+</script>
+</body>
+</html>
